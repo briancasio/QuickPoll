@@ -47,6 +47,9 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Ref for silence timeout
+  const silenceTimeoutRef = useRef(null);
+
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
@@ -56,6 +59,12 @@ export default function AdminPage() {
       recognitionRef.current.interimResults = false;
       
       recognitionRef.current.onresult = (event) => {
+        // Clear silence timeout since we got a result
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
+        
         const transcript = event.results[0][0].transcript;
         if (activeInput === 'question') {
           setQuestion(prev => prev + (prev ? ' ' : '') + transcript);
@@ -68,10 +77,18 @@ export default function AdminPage() {
       };
       
       recognitionRef.current.onerror = () => {
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
         setIsListening(false);
       };
       
       recognitionRef.current.onend = () => {
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
         setIsListening(false);
       };
     }
@@ -103,15 +120,39 @@ export default function AdminPage() {
     }
   };
 
-  // Start voice input
+  // Stop voice input
+  const stopVoice = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    setIsListening(false);
+  };
+
+  // Start or toggle voice input
   const startVoice = (inputType) => {
     if (!recognitionRef.current) {
       alert('Speech recognition not supported in this browser');
       return;
     }
+    
+    // If already listening, stop
+    if (isListening) {
+      stopVoice();
+      return;
+    }
+    
     setActiveInput(inputType);
     setIsListening(true);
     recognitionRef.current.start();
+    
+    // Set 3-second silence timeout
+    silenceTimeoutRef.current = setTimeout(() => {
+      stopVoice();
+    }, 3000);
   };
 
   // Option templates

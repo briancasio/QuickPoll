@@ -2,12 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import useSWR, { mutate } from 'swr';
 import '../globals.css';
+
+// Fetcher for SWR
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authToken, setAuthToken] = useState('');
-  const [poll, setPoll] = useState(null);
+  
+  // Use SWR for smart polling
+  const { data, error } = useSWR(isLoggedIn ? '/api/poll' : null, fetcher, {
+    refreshInterval: 2000,
+    revalidateOnFocus: true,
+    dedupingInterval: 500,
+  });
+  
+  const poll = data?.poll;
   
   // Login form
   const [username, setUsername] = useState('');
@@ -26,16 +38,8 @@ export default function AdminPage() {
   const recognitionRef = useRef(null);
   const questionInputRef = useRef(null);
 
-  // Fetch current poll
-  const fetchPoll = async () => {
-    try {
-      const res = await fetch('/api/poll');
-      const data = await res.json();
-      setPoll(data.poll);
-    } catch (err) {
-      console.error('Failed to fetch poll:', err);
-    }
-  };
+  // Fetch current poll - kept for manual refresh if needed
+  const fetchPoll = () => mutate('/api/poll');
 
   useEffect(() => {
     // Check for stored token (persistent across browser sessions)
@@ -44,11 +48,6 @@ export default function AdminPage() {
       setAuthToken(token);
       setIsLoggedIn(true);
     }
-    fetchPoll();
-    
-    // Auto-refresh poll data every 2 seconds for real-time updates
-    const interval = setInterval(fetchPoll, 2000);
-    return () => clearInterval(interval);
   }, []);
 
   // Ref for silence timeout

@@ -1,57 +1,72 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import useSWR, { mutate } from 'swr';
 import './globals.css';
 
+// Fetcher for SWR
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
 export default function Home() {
-  const [poll, setPoll] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null); // Track which option is selected
 
   // QR Code URL (using Google Charts API)
   const siteUrl = 'https://quickpoll.briancasio.com';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(siteUrl)}`;
 
-  // Fetch poll data
-  const fetchPoll = async () => {
-    try {
-      const res = await fetch('/api/poll');
-      const data = await res.json();
-      setPoll(data.poll);
-    } catch (err) {
-      console.error('Failed to fetch poll:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use SWR for smart polling and caching
+  // Students poll less frequently (5s) since they just need to see new polls
+  // Admin keeps 2s for real-time vote updates
+  const { data, error, isLoading } = useSWR('/api/poll', fetcher, {
+    refreshInterval: 3000, // Poll every 3 seconds (balance between responsiveness and load)
+    revalidateOnFocus: true, // Refresh when window gets focus
+    dedupingInterval: 1000, // Avoid duplicate requests
+  });
 
-  // Initial fetch and set up polling interval
-  useEffect(() => {
-    fetchPoll();
-    const interval = setInterval(fetchPoll, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  const poll = data?.poll;
 
-  // Handle vote - allows changing vote
+  // Handle vote with Optimistic UI
   const handleVote = async (optionId) => {
+    // Optimistically update UI immediately
+    setSelectedOption(optionId);
+    
+    // Optimistically update the poll data locally
+    if (poll) {
+      const updatedPoll = {
+        ...poll,
+        options: poll.options.map(opt => {
+          if (opt.id === optionId) {
+            return { ...opt, votes: opt.votes + 1 };
+          }
+          if (opt.id === selectedOption) {
+            return { ...opt, votes: Math.max(0, opt.votes - 1) };
+          }
+          return opt;
+        })
+      };
+      
+      // Update local cache immediately without waiting for server
+      mutate('/api/poll', { poll: updatedPoll }, false);
+    }
+
     try {
-      const res = await fetch('/api/vote', {
+      await fetch('/api/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ optionId, previousOptionId: selectedOption })
       });
       
-      if (res.ok) {
-        setSelectedOption(optionId);
-        fetchPoll(); // Immediately refresh
-      }
+      // Revalidate to ensure data consistency with server
+      mutate('/api/poll');
     } catch (err) {
       console.error('Failed to vote:', err);
+      // Revert on error
+      mutate('/api/poll');
     }
   };
 
-  if (loading) {
+  if (isLoading && !poll) {
     return (
       <div className="container">
         <p className="loading">Loading...</p>

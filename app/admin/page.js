@@ -65,12 +65,26 @@ export default function AdminPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Detect iOS/iPadOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // Detect iOS/iPadOS - improved detection for newer iOS versions
+    // Key differentiators: iOS has touch (maxTouchPoints > 1), Macs don't
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const hasTouchScreen = navigator.maxTouchPoints > 1;
+    
+    const isIOSDevice = 
+      // Traditional iOS detection (iPhone, iPad, iPod in user agent)
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      // iPad with iOS 13+ reports as Mac but HAS touchscreen
+      (navigator.platform === 'MacIntel' && hasTouchScreen) ||
+      // Fallback: Macintosh user agent WITH touch capability (not just ontouchend)
+      (/Macintosh/.test(userAgent) && hasTouchScreen);
+    
+    console.log('User Agent:', userAgent);
+    console.log('Platform:', navigator.platform);
+    console.log('Max Touch Points:', navigator.maxTouchPoints);
+    console.log('Has Touch Screen:', hasTouchScreen);
+    console.log('iOS detected:', isIOSDevice);
     
     if (isIOSDevice) {
-      console.log('iOS detected');
       setIsIOS(true);
     }
     

@@ -19,6 +19,7 @@ export default function AdminPage() {
   const [options, setOptions] = useState(['', '']);
   const [isListening, setIsListening] = useState(false);
   const [activeInput, setActiveInput] = useState(null); // 'question' or option index
+  const [isIOS, setIsIOS] = useState(false);
   
   const recognitionRef = useRef(null);
 
@@ -61,19 +62,40 @@ export default function AdminPage() {
   // Initialize speech recognition and set up event handlers (only once)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) return;
     
+    // Detect iOS/iPadOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (isIOSDevice) {
+      console.log('iOS detected - using keyboard dictation fallback');
+      setIsIOS(true);
+      return; // Skip Web Speech API setup on iOS
+    }
+    
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      console.log('Speech recognition not supported');
+      return;
+    }
+    
+    console.log('Initializing speech recognition...');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = true; // Keep listening until manually stopped
     recognitionRef.current.lang = 'en-US';
     recognitionRef.current.interimResults = false; // Only final results
     
+    recognitionRef.current.onstart = () => {
+      console.log('Speech recognition started');
+    };
+    
     recognitionRef.current.onresult = (event) => {
+      console.log('Speech recognition result:', event);
       const result = event.results[event.results.length - 1];
       
       if (result.isFinal) {
         const transcript = result[0].transcript;
+        console.log('Transcript:', transcript, 'Active input:', activeInputRef.current);
         const currentActiveInput = activeInputRef.current;
         
         if (currentActiveInput === 'question') {
@@ -95,11 +117,12 @@ export default function AdminPage() {
     };
     
     recognitionRef.current.onerror = (event) => {
-      console.log('Speech recognition error:', event.error);
+      console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
     
     recognitionRef.current.onend = () => {
+      console.log('Speech recognition ended');
       setIsListening(false);
     };
     
@@ -147,21 +170,26 @@ export default function AdminPage() {
 
   // Start voice input (called on mouse down)
   const startVoice = (inputType) => {
+    console.log('startVoice called with:', inputType);
     if (!recognitionRef.current) {
       alert('Speech recognition not supported in this browser');
       return;
     }
     
     // Don't start if already listening
-    if (isListening) return;
+    if (isListening) {
+      console.log('Already listening, skipping start');
+      return;
+    }
     
     setActiveInput(inputType);
     setIsListening(true);
     try {
+      console.log('Starting speech recognition...');
       recognitionRef.current.start();
     } catch (err) {
       // Handle case where recognition is already started
-      console.log('Recognition already started');
+      console.error('Recognition start error:', err);
     }
   };
 
@@ -320,6 +348,14 @@ export default function AdminPage() {
         <div className="create-poll">
           <h2>{poll ? 'Replace Poll' : 'Create Poll'}</h2>
           
+          {/* iOS Dictation Tip */}
+          {isIOS && (
+            <div className="ios-tip">
+              <span className="ios-tip-icon">💡</span>
+              <span>Tap the <strong>🎤</strong> button on your keyboard to dictate text</span>
+            </div>
+          )}
+          
           <form onSubmit={handleCreatePoll}>
             {/* Question Input */}
             <div className="input-group">
@@ -331,22 +367,24 @@ export default function AdminPage() {
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Enter your poll question..."
                 />
-                <button
-                  type="button"
-                  onMouseDown={() => startVoice('question')}
-                  onMouseUp={stopVoice}
-                  onMouseLeave={stopVoice}
-                  onTouchStart={() => startVoice('question')}
-                  onTouchEnd={stopVoice}
-                  className={`btn-voice ${isListening && activeInput === 'question' ? 'listening' : ''}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                  </svg>
-                </button>
+                {!isIOS && (
+                  <button
+                    type="button"
+                    onMouseDown={() => startVoice('question')}
+                    onMouseUp={stopVoice}
+                    onMouseLeave={stopVoice}
+                    onTouchStart={() => startVoice('question')}
+                    onTouchEnd={stopVoice}
+                    className={`btn-voice ${isListening && activeInput === 'question' ? 'listening' : ''}`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                      <line x1="12" y1="19" x2="12" y2="23"></line>
+                      <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -372,22 +410,24 @@ export default function AdminPage() {
                       onChange={(e) => updateOption(index, e.target.value)}
                       placeholder={`Option ${index + 1}`}
                     />
-                    <button
-                      type="button"
-                      onMouseDown={() => startVoice(index)}
-                      onMouseUp={stopVoice}
-                      onMouseLeave={stopVoice}
-                      onTouchStart={() => startVoice(index)}
-                      onTouchEnd={stopVoice}
-                      className={`btn-voice ${isListening && activeInput === index ? 'listening' : ''}`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        <line x1="12" y1="19" x2="12" y2="23"></line>
-                        <line x1="8" y1="23" x2="16" y2="23"></line>
-                      </svg>
-                    </button>
+                    {!isIOS && (
+                      <button
+                        type="button"
+                        onMouseDown={() => startVoice(index)}
+                        onMouseUp={stopVoice}
+                        onMouseLeave={stopVoice}
+                        onTouchStart={() => startVoice(index)}
+                        onTouchEnd={stopVoice}
+                        className={`btn-voice ${isListening && activeInput === index ? 'listening' : ''}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                          <line x1="12" y1="19" x2="12" y2="23"></line>
+                          <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   {options.length > 2 && (
                     <button type="button" onClick={() => removeOption(index)} className="btn-remove">×</button>

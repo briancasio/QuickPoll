@@ -533,3 +533,25 @@ body {
     width: 100%;
   }
 }
+
+/* iOS Tip */
+.ios-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.ios-tip-icon {
+  font-size: 20px;
+}
+
+.ios-tip strong {
+  color: var(--primary);
+}

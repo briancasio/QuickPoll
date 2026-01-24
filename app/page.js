@@ -9,6 +9,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null); // Track which option is selected
 
+  // QR Code URL (using Google Charts API)
+  const siteUrl = 'https://quickpoll.briancasio.com';
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(siteUrl)}`;
+
   // Fetch poll data
   const fetchPoll = async () => {
     try {
@@ -64,6 +68,7 @@ export default function Home() {
       {!poll ? (
         <div className="no-poll">
           <p>No poll available at the moment.</p>
+          <p className="no-poll-hint">Waiting for admin to create a poll...</p>
         </div>
       ) : (
         <div className="poll">
@@ -89,6 +94,12 @@ export default function Home() {
           )}
         </div>
       )}
+
+      {/* QR Code - Below poll for secondary priority */}
+      <div className="qr-section">
+        <img src={qrCodeUrl} alt="Scan to join" className="qr-code" />
+        <p className="qr-text">quickpoll.briancasio.com</p>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 16px;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
 
 .nav-link {
@@ -83,6 +83,39 @@ body {
 .no-poll p {
   color: var(--text-muted);
   font-size: 18px;
+}
+
+.no-poll-hint {
+  font-size: 14px !important;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+/* QR Code Section */
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.qr-code {
+  width: 150px;
+  height: 150px;
+  border-radius: 12px;
+  background: white;
+  padding: 8px;
+}
+
+.qr-text {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* Poll Display */
@@ -325,11 +358,12 @@ body {
 
 /* Admin Dashboard */
 .admin-dashboard h1 {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   background: var(--gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-size: 24px;
 }
 
 .admin-dashboard h2 {
@@ -340,11 +374,11 @@ body {
 
 /* Current Poll */
 .current-poll {
-  padding: 24px;
+  padding: 16px;
   background: var(--bg-secondary);
   border-radius: 12px;
   border: 1px solid var(--border);
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 
 .poll-question {
@@ -366,7 +400,7 @@ body {
 
 /* Create Poll */
 .create-poll {
-  padding: 24px;
+  padding: 16px;
   background: var(--bg-secondary);
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -375,7 +409,7 @@ body {
 .create-poll form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .input-group label,
@@ -414,6 +448,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 18px;
+  color: #a855f7; /* Purple icon */
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -581,5 +616,37 @@ body {
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Top Create Button */
+.btn-create-top {
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 16px;
+  padding: 12px;
+}
+
+/* Active Template */
+.template-buttons button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Larger touch targets for mobile */
+@media (max-width: 480px) {
+  .btn-voice {
+    width: 52px;
+    height: 52px;
+  }
+  
+  .option {
+    padding: 20px;
+    font-size: 18px;
+  }
+  
+  .btn-create-top {
+    padding: 20px;
+    font-size: 20px;
   }
 }

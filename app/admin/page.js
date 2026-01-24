@@ -14,12 +14,13 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   
-  // Poll creation
+  // Poll creation - default to Yes/No for speed
   const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['', '']);
+  const [options, setOptions] = useState(['Yes', 'No']);
   const [isListening, setIsListening] = useState(false);
   const [activeInput, setActiveInput] = useState(null); // 'question' or option index
   const [isIOS, setIsIOS] = useState(false);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   
   const recognitionRef = useRef(null);
@@ -70,15 +71,17 @@ export default function AdminPage() {
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
     if (isIOSDevice) {
-      console.log('iOS detected - using keyboard dictation fallback');
+      console.log('iOS detected');
       setIsIOS(true);
-      return; // Skip Web Speech API setup on iOS
     }
     
     if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       console.log('Speech recognition not supported');
+      setIsSpeechSupported(false);
       return;
     }
+    
+    setIsSpeechSupported(true);
     
     console.log('Initializing speech recognition...');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -387,8 +390,8 @@ export default function AdminPage() {
         <div className="create-poll">
           <h2>{poll ? 'Replace Poll' : 'Create Poll'}</h2>
           
-          {/* iOS Dictation Tip */}
-          {isIOS && (
+          {/* iOS Dictation Tip - Only show if speech API is NOT supported AND we are on iOS */}
+          {!isSpeechSupported && isIOS && (
             <div className="ios-tip">
               <span className="ios-tip-icon">💡</span>
               <span>Tap the <strong>🎤</strong> button on your keyboard (bottom right) to dictate text</span>
@@ -396,6 +399,11 @@ export default function AdminPage() {
           )}
           
           <form onSubmit={handleCreatePoll}>
+            {/* Create Poll Button - TOP for quick access */}
+            <button type="submit" className="btn-primary btn-create btn-create-top">
+              {poll ? 'Replace Current Poll' : 'Create Poll'}
+            </button>
+
             {/* Question Input */}
             <div className="input-group">
               <label>Question</label>
@@ -407,7 +415,7 @@ export default function AdminPage() {
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Enter your poll question..."
                 />
-                {!isIOS && (
+                {isSpeechSupported && (
                   <button
                     type="button"
                     onMouseDown={() => startVoice('question')}
@@ -432,7 +440,7 @@ export default function AdminPage() {
             <div className="templates">
               <label>Quick Templates</label>
               <div className="template-buttons">
-                <button type="button" onClick={() => applyTemplate('yesno')}>Yes / No</button>
+                <button type="button" onClick={() => applyTemplate('yesno')} className="active">Yes / No</button>
                 <button type="button" onClick={() => applyTemplate('123')}>1 / 2 / 3</button>
                 <button type="button" onClick={() => applyTemplate('12345')}>1 / 2 / 3 / 4 / 5</button>
               </div>
@@ -450,7 +458,7 @@ export default function AdminPage() {
                       onChange={(e) => updateOption(index, e.target.value)}
                       placeholder={`Option ${index + 1}`}
                     />
-                    {!isIOS && (
+                    {isSpeechSupported && (
                       <button
                         type="button"
                         onMouseDown={() => startVoice(index)}
@@ -476,10 +484,6 @@ export default function AdminPage() {
               ))}
               <button type="button" onClick={addOption} className="btn-add">+ Add Option</button>
             </div>
-
-            <button type="submit" className="btn-primary btn-create">
-              {poll ? 'Replace Current Poll' : 'Create Poll'}
-            </button>
           </form>
         </div>
       </div>

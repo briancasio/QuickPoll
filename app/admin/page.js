@@ -37,8 +37,8 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    // Check for stored token
-    const token = sessionStorage.getItem('adminToken');
+    // Check for stored token (persistent across browser sessions)
+    const token = localStorage.getItem('adminToken');
     if (token) {
       setAuthToken(token);
       setIsLoggedIn(true);
@@ -154,6 +154,7 @@ export default function AdminPage() {
         setAuthToken(data.token);
         setIsLoggedIn(true);
         sessionStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminToken', data.token);
       } else {
         setLoginError('Invalid credentials');
       }
@@ -299,7 +300,7 @@ export default function AdminPage() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setAuthToken('');
-    sessionStorage.removeItem('adminToken');
+    localStorage.removeItem('adminToken');
   };
 
   // Login form

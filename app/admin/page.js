@@ -50,49 +50,66 @@ export default function AdminPage() {
   // Ref for silence timeout
   const silenceTimeoutRef = useRef(null);
 
-  // Initialize speech recognition
+  // Refs to store current values for use in callbacks
+  const activeInputRef = useRef(null);
+  
+  // Keep ref updated when activeInput changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+    activeInputRef.current = activeInput;
+  }, [activeInput]);
+
+  // Initialize speech recognition and set up event handlers (only once)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) return;
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.continuous = true; // Keep listening until manually stopped
+    recognitionRef.current.lang = 'en-US';
+    recognitionRef.current.interimResults = false; // Only final results
+    
+    recognitionRef.current.onresult = (event) => {
+      const result = event.results[event.results.length - 1];
       
-      recognitionRef.current.onresult = (event) => {
-        // Clear silence timeout since we got a result
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
-          silenceTimeoutRef.current = null;
+      if (result.isFinal) {
+        const transcript = result[0].transcript;
+        const currentActiveInput = activeInputRef.current;
+        
+        if (currentActiveInput === 'question') {
+          setQuestion(prev => prev + (prev ? ' ' : '') + transcript);
+        } else if (typeof currentActiveInput === 'number') {
+          setOptions(prevOptions => {
+            const newOptions = [...prevOptions];
+            newOptions[currentActiveInput] = (newOptions[currentActiveInput] || '') + (newOptions[currentActiveInput] ? ' ' : '') + transcript;
+            return newOptions;
+          });
         }
         
-        const transcript = event.results[0][0].transcript;
-        if (activeInput === 'question') {
-          setQuestion(prev => prev + (prev ? ' ' : '') + transcript);
-        } else if (typeof activeInput === 'number') {
-          const newOptions = [...options];
-          newOptions[activeInput] = (newOptions[activeInput] || '') + (newOptions[activeInput] ? ' ' : '') + transcript;
-          setOptions(newOptions);
+        // Auto-stop after getting a result
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
         }
         setIsListening(false);
-      };
-      
-      recognitionRef.current.onerror = () => {
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
-          silenceTimeoutRef.current = null;
-        }
-        setIsListening(false);
-      };
-      
-      recognitionRef.current.onend = () => {
-        if (silenceTimeoutRef.current) {
-          clearTimeout(silenceTimeoutRef.current);
-          silenceTimeoutRef.current = null;
-        }
-        setIsListening(false);
-      };
-    }
-  }, [activeInput, options]);
+      }
+    };
+    
+    recognitionRef.current.onerror = (event) => {
+      console.log('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
+    
+    recognitionRef.current.onend = () => {
+      setIsListening(false);
+    };
+    
+    // Cleanup on unmount
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []); // Empty deps - only run once on mount
 
   // Handle login
   const handleLogin = async (e) => {
@@ -120,39 +137,32 @@ export default function AdminPage() {
     }
   };
 
-  // Stop voice input
+  // Stop voice input (called on mouse up)
   const stopVoice = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current);
-      silenceTimeoutRef.current = null;
-    }
     setIsListening(false);
   };
 
-  // Start or toggle voice input
+  // Start voice input (called on mouse down)
   const startVoice = (inputType) => {
     if (!recognitionRef.current) {
       alert('Speech recognition not supported in this browser');
       return;
     }
     
-    // If already listening, stop
-    if (isListening) {
-      stopVoice();
-      return;
-    }
+    // Don't start if already listening
+    if (isListening) return;
     
     setActiveInput(inputType);
     setIsListening(true);
-    recognitionRef.current.start();
-    
-    // Set 3-second silence timeout
-    silenceTimeoutRef.current = setTimeout(() => {
-      stopVoice();
-    }, 3000);
+    try {
+      recognitionRef.current.start();
+    } catch (err) {
+      // Handle case where recognition is already started
+      console.log('Recognition already started');
+    }
   };
 
   // Option templates
@@ -323,9 +333,12 @@ export default function AdminPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => startVoice('question')}
+                  onMouseDown={() => startVoice('question')}
+                  onMouseUp={stopVoice}
+                  onMouseLeave={stopVoice}
+                  onTouchStart={() => startVoice('question')}
+                  onTouchEnd={stopVoice}
                   className={`btn-voice ${isListening && activeInput === 'question' ? 'listening' : ''}`}
-                  disabled={isListening}
                 >
                   🎤
                 </button>
@@ -356,9 +369,12 @@ export default function AdminPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => startVoice(index)}
+                      onMouseDown={() => startVoice(index)}
+                      onMouseUp={stopVoice}
+                      onMouseLeave={stopVoice}
+                      onTouchStart={() => startVoice(index)}
+                      onTouchEnd={stopVoice}
                       className={`btn-voice ${isListening && activeInput === index ? 'listening' : ''}`}
-                      disabled={isListening}
                     >
                       🎤
                     </button>

@@ -20,8 +20,10 @@ export default function AdminPage() {
   const [isListening, setIsListening] = useState(false);
   const [activeInput, setActiveInput] = useState(null); // 'question' or option index
   const [isIOS, setIsIOS] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   const recognitionRef = useRef(null);
+  const questionInputRef = useRef(null);
 
   // Fetch current poll
   const fetchPoll = async () => {
@@ -160,6 +162,16 @@ export default function AdminPage() {
     }
   };
 
+  // Autofocus question input when logged in
+  useEffect(() => {
+    if (isLoggedIn && questionInputRef.current) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        questionInputRef.current.focus();
+      }, 100);
+    }
+  }, [isLoggedIn]);
+
   // Stop voice input (called on mouse up)
   const stopVoice = () => {
     if (recognitionRef.current) {
@@ -219,6 +231,11 @@ export default function AdminPage() {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
+    
+    // Auto-add new option when typing in the last one
+    if (index === options.length - 1 && value.trim() && options.length < 10) {
+      setOptions([...newOptions, '']);
+    }
   };
 
   // Create poll
@@ -245,6 +262,20 @@ export default function AdminPage() {
         fetchPoll();
         setQuestion('');
         setOptions(['', '']);
+        
+        // Haptic feedback on iOS
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        
+        // Show success toast
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
+        
+        // Refocus question input for next poll
+        if (questionInputRef.current) {
+          questionInputRef.current.focus();
+        }
       }
     } catch (err) {
       console.error('Failed to create poll:', err);
@@ -315,6 +346,13 @@ export default function AdminPage() {
       <div className="admin-dashboard">
         <h1>Admin Dashboard</h1>
 
+        {/* Success Toast */}
+        {showSuccess && (
+          <div className="success-toast">
+            ✓ Poll created successfully!
+          </div>
+        )}
+
         {/* Current Poll Status */}
         {poll && (() => {
           const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
@@ -352,7 +390,7 @@ export default function AdminPage() {
           {isIOS && (
             <div className="ios-tip">
               <span className="ios-tip-icon">💡</span>
-              <span>Tap the <strong>🎤</strong> button on your keyboard to dictate text</span>
+              <span>Tap the <strong>🎤</strong> button on your keyboard (bottom right) to dictate text</span>
             </div>
           )}
           
@@ -362,6 +400,7 @@ export default function AdminPage() {
               <label>Question</label>
               <div className="input-with-voice">
                 <input
+                  ref={questionInputRef}
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}

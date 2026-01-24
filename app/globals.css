@@ -555,3 +555,31 @@ body {
 .ios-tip strong {
   color: var(--primary);
 }
+
+/* Success Toast */
+.success-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--success);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 1000;
+  animation: slideDown 0.3s ease;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

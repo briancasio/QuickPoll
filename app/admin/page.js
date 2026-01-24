@@ -403,8 +403,8 @@ export default function AdminPage() {
         <div className="create-poll">
           <h2>{poll ? 'Replace Poll' : 'Create Poll'}</h2>
           
-          {/* iOS Dictation Tip - Only show if speech API is NOT supported AND we are on iOS */}
-          {!isSpeechSupported && isIOS && (
+          {/* iOS Dictation Tip - Always show on iOS (keyboard dictation is preferred) */}
+          {isIOS && (
             <div className="ios-tip">
               <span className="ios-tip-icon">💡</span>
               <span>Tap the <strong>🎤</strong> button on your keyboard (bottom right) to dictate text</span>
@@ -428,7 +428,7 @@ export default function AdminPage() {
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Enter your poll question..."
                 />
-                {isSpeechSupported && (
+                {isSpeechSupported && !isIOS && (
                   <button
                     type="button"
                     onMouseDown={() => startVoice('question')}
@@ -471,7 +471,7 @@ export default function AdminPage() {
                       onChange={(e) => updateOption(index, e.target.value)}
                       placeholder={`Option ${index + 1}`}
                     />
-                    {isSpeechSupported && (
+                    {isSpeechSupported && !isIOS && (
                       <button
                         type="button"
                         onMouseDown={() => startVoice(index)}

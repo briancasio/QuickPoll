@@ -1,3 +1,13 @@
+/**
+ * page.js - Student View (Homepage)
+ * 
+ * This is the main page where students vote on polls.
+ * Features:
+ * - Real-time poll display
+ * - Optimistic UI updates for instant feedback
+ * - QR code for easy sharing
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -5,40 +15,47 @@ import Link from 'next/link';
 import useSWR, { mutate } from 'swr';
 import './globals.css';
 
-// Fetcher for SWR
+// Fetcher function for SWR data fetching
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function Home() {
-  const [selectedOption, setSelectedOption] = useState(null); // Track which option is selected
+  // Track which option the user has selected
+  const [selectedOption, setSelectedOption] = useState(null);
 
-  // QR Code URL (using Google Charts API)
+  // QR Code configuration - points to the deployed app
   const siteUrl = 'https://quickpoll.briancasio.com';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(siteUrl)}`;
 
-  // Use SWR for smart polling and caching
-  // Students poll less frequently (5s) since they just need to see new polls
-  // Admin keeps 2s for real-time vote updates
+  // SWR hook for automatic polling and caching
+  // Polls every 3 seconds to check for new polls or vote updates
   const { data, error, isLoading } = useSWR('/api/poll', fetcher, {
-    refreshInterval: 3000, // Poll every 3 seconds (balance between responsiveness and load)
-    revalidateOnFocus: true, // Refresh when window gets focus
-    dedupingInterval: 1000, // Avoid duplicate requests
+    refreshInterval: 3000,      // Refresh every 3 seconds
+    revalidateOnFocus: true,    // Refresh when user returns to tab
+    dedupingInterval: 1000,     // Prevent duplicate requests within 1s
   });
 
+  // Extract poll from response
   const poll = data?.poll;
 
-  // Handle vote with Optimistic UI
+  /**
+   * Handle voting with Optimistic UI
+   * Updates the UI immediately before the server responds
+   * for a snappy user experience
+   */
   const handleVote = async (optionId) => {
-    // Optimistically update UI immediately
+    // 1. Update selected option immediately
     setSelectedOption(optionId);
     
-    // Optimistically update the poll data locally
+    // 2. Optimistically update vote counts in the cache
     if (poll) {
       const updatedPoll = {
         ...poll,
         options: poll.options.map(opt => {
+          // Increment vote for selected option
           if (opt.id === optionId) {
             return { ...opt, votes: opt.votes + 1 };
           }
+          // Decrement vote for previously selected option (if changing vote)
           if (opt.id === selectedOption) {
             return { ...opt, votes: Math.max(0, opt.votes - 1) };
           }
@@ -46,10 +63,11 @@ export default function Home() {
         })
       };
       
-      // Update local cache immediately without waiting for server
+      // Update local cache without revalidating yet
       mutate('/api/poll', { poll: updatedPoll }, false);
     }
 
+    // 3. Send vote to server
     try {
       await fetch('/api/vote', {
         method: 'POST',
@@ -57,15 +75,16 @@ export default function Home() {
         body: JSON.stringify({ optionId, previousOptionId: selectedOption })
       });
       
-      // Revalidate to ensure data consistency with server
+      // Revalidate to sync with server
       mutate('/api/poll');
     } catch (err) {
       console.error('Failed to vote:', err);
-      // Revert on error
+      // Revert optimistic update on error
       mutate('/api/poll');
     }
   };
 
+  // Show loading state on initial load
   if (isLoading && !poll) {
     return (
       <div className="container">
@@ -74,21 +93,28 @@ export default function Home() {
     );
   }
 
+  // Main render
   return (
     <div className="container">
+      {/* Navigation - link to admin page */}
       <nav className="nav">
         <Link href="/admin" className="nav-link">Admin</Link>
       </nav>
 
+      {/* Poll content or "no poll" message */}
       {!poll ? (
+        // No active poll
         <div className="no-poll">
           <p>No poll available at the moment.</p>
           <p className="no-poll-hint">Waiting for admin to create a poll...</p>
         </div>
       ) : (
+        // Active poll
         <div className="poll">
+          {/* Poll question */}
           <h1 className="question">{poll.question}</h1>
           
+          {/* Voting options */}
           <div className="options">
             {poll.options.map((option) => (
               <button
@@ -97,6 +123,7 @@ export default function Home() {
                 onClick={() => handleVote(option.id)}
               >
                 <span className="option-text">{option.text}</span>
+                {/* Show checkmark for selected option */}
                 {selectedOption === option.id && (
                   <span className="option-check">✓</span>
                 )}
@@ -104,13 +131,14 @@ export default function Home() {
             ))}
           </div>
 
+          {/* Confirmation message after voting */}
           {selectedOption !== null && (
             <p className="vote-message">Your vote has been recorded. You can change it anytime.</p>
           )}
         </div>
       )}
 
-      {/* QR Code - Below poll for secondary priority */}
+      {/* QR Code for easy access */}
       <div className="qr-section">
         <img src={qrCodeUrl} alt="Scan to join" className="qr-code" />
         <p className="qr-text">quickpoll.briancasio.com</p>

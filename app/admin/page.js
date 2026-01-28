@@ -1,3 +1,13 @@
+/**
+ * admin/page.js - Admin Dashboard
+ * 
+ * This page allows admins to:
+ * - Login with credentials
+ * - Create and manage polls
+ * - See real-time vote results
+ * - Use voice input for poll creation (desktop only)
+ */
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -5,38 +15,42 @@ import Link from 'next/link';
 import useSWR, { mutate } from 'swr';
 import '../globals.css';
 
-// Fetcher for SWR
+// Fetcher for SWR data fetching
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function AdminPage() {
+  // ========== STATE ==========
+  
+  // Auth state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authToken, setAuthToken] = useState('');
   
-  // Use SWR for smart polling
+  // SWR hook - only fetch when logged in
   const { data, error } = useSWR(isLoggedIn ? '/api/poll' : null, fetcher, {
-    refreshInterval: 2000,
+    refreshInterval: 2000,      // Refresh every 2s for real-time votes
     revalidateOnFocus: true,
     dedupingInterval: 500,
   });
   
   const poll = data?.poll;
   
-  // Login form
+  // Login form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   
-  // Poll creation - default to Yes/No for speed
+  // Poll creation state
   const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['Yes', 'No']);
+  const [options, setOptions] = useState(['Yes', 'No']); // Default options
   const [isListening, setIsListening] = useState(false);
-  const [activeInput, setActiveInput] = useState(null); // 'question' or option index
-  const [isIOS, setIsIOS] = useState(false);
+  const [activeInput, setActiveInput] = useState(null);  // 'question' or option index
+  const [isIOS, setIsIOS] = useState(false);             // iOS device detection
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false); // Success toast
   
-  const recognitionRef = useRef(null);
-  const questionInputRef = useRef(null);
+  // Refs
+  const recognitionRef = useRef(null);    // Speech recognition instance
+  const questionInputRef = useRef(null);  // For autofocus
 
   // Fetch current poll - kept for manual refresh if needed
   const fetchPoll = () => mutate('/api/poll');
@@ -65,38 +79,27 @@ export default function AdminPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Detect iOS/iPadOS - improved detection for newer iOS versions
-    // Key differentiators: iOS has touch (maxTouchPoints > 1), Macs don't
+    // Detect iOS/iPadOS devices
+    // iOS has touchscreen (maxTouchPoints > 1), Macs don't
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const hasTouchScreen = navigator.maxTouchPoints > 1;
     
     const isIOSDevice = 
-      // Traditional iOS detection (iPhone, iPad, iPod in user agent)
-      /iPad|iPhone|iPod/.test(userAgent) ||
-      // iPad with iOS 13+ reports as Mac but HAS touchscreen
-      (navigator.platform === 'MacIntel' && hasTouchScreen) ||
-      // Fallback: Macintosh user agent WITH touch capability (not just ontouchend)
-      (/Macintosh/.test(userAgent) && hasTouchScreen);
-    
-    console.log('User Agent:', userAgent);
-    console.log('Platform:', navigator.platform);
-    console.log('Max Touch Points:', navigator.maxTouchPoints);
-    console.log('Has Touch Screen:', hasTouchScreen);
-    console.log('iOS detected:', isIOSDevice);
+      /iPad|iPhone|iPod/.test(userAgent) ||                    // Traditional detection
+      (navigator.platform === 'MacIntel' && hasTouchScreen) || // iPad with iOS 13+
+      (/Macintosh/.test(userAgent) && hasTouchScreen);         // Fallback
     
     if (isIOSDevice) {
       setIsIOS(true);
     }
     
+    // Check if Web Speech API is supported
     if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-      console.log('Speech recognition not supported');
       setIsSpeechSupported(false);
       return;
     }
     
     setIsSpeechSupported(true);
-    
-    console.log('Initializing speech recognition...');
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = true; // Keep listening until manually stopped
@@ -134,13 +137,14 @@ export default function AdminPage() {
       }
     };
     
+    // Handle speech recognition errors (e.g., no permission, network issues)
     recognitionRef.current.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
     
+    // Called when speech recognition stops (manual or automatic)
     recognitionRef.current.onend = () => {
-      console.log('Speech recognition ended');
       setIsListening(false);
     };
     
@@ -152,12 +156,17 @@ export default function AdminPage() {
     };
   }, []); // Empty deps - only run once on mount
 
-  // Handle login
+  /**
+   * Handle admin login
+   * Sends credentials to /api/auth, stores token on success
+   * Token is stored in both sessionStorage and localStorage for persistence
+   */
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     
     try {
+      // Send login request
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,10 +176,11 @@ export default function AdminPage() {
       const data = await res.json();
       
       if (res.ok) {
+        // Store auth token and mark as logged in
         setAuthToken(data.token);
         setIsLoggedIn(true);
         sessionStorage.setItem('adminToken', data.token);
-        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminToken', data.token); // Persists across sessions
       } else {
         setLoginError('Invalid credentials');
       }
@@ -197,24 +207,25 @@ export default function AdminPage() {
     setIsListening(false);
   };
 
-  // Start voice input (called on mouse down)
+  /**
+   * Start voice input for a specific field
+   * Uses Web Speech API to convert speech to text
+   * @param {string|number} inputType - 'question' or option index (0, 1, 2...)
+   */
   const startVoice = (inputType) => {
-    console.log('startVoice called with:', inputType);
     if (!recognitionRef.current) {
       alert('Speech recognition not supported in this browser');
       return;
     }
     
-    // Don't start if already listening
-    if (isListening) {
-      console.log('Already listening, skipping start');
-      return;
-    }
+    // Prevent starting multiple recognition sessions
+    if (isListening) return;
     
+    // Track which input field should receive the speech
     setActiveInput(inputType);
     setIsListening(true);
+    
     try {
-      console.log('Starting speech recognition...');
       recognitionRef.current.start();
     } catch (err) {
       // Handle case where recognition is already started
@@ -222,7 +233,10 @@ export default function AdminPage() {
     }
   };
 
-  // Option templates
+  /**
+   * Apply a preset template for common poll types
+   * @param {string} template - 'yesno', '123', or '12345'
+   */
   const applyTemplate = (template) => {
     switch (template) {
       case 'yesno':
@@ -237,59 +251,79 @@ export default function AdminPage() {
     }
   };
 
-  // Add/remove options
+  // ========== OPTION MANAGEMENT ==========
+  
+  // Add a new empty option field
   const addOption = () => setOptions([...options, '']);
+  
+  // Remove an option (minimum 2 required)
   const removeOption = (index) => {
     if (options.length > 2) {
       setOptions(options.filter((_, i) => i !== index));
     }
   };
+  
+  /**
+   * Update an option's text
+   * Auto-adds a new option field when typing in the last one
+   */
   const updateOption = (index, value) => {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
     
-    // Auto-add new option when typing in the last one
+    // Auto-add new option when user types in the last field
     if (index === options.length - 1 && value.trim() && options.length < 10) {
       setOptions([...newOptions, '']);
     }
   };
 
-  // Create poll
+  /**
+   * Create a new poll
+   * Validates input, sends to API, and resets form on success
+   * Also provides haptic feedback on mobile devices
+   */
   const handleCreatePoll = async (e) => {
     e.preventDefault();
     
+    // Filter out empty options
     const validOptions = options.filter(o => o.trim());
+    
+    // Validate: need question and at least 2 options
     if (!question.trim() || validOptions.length < 2) {
       alert('Please enter a question and at least 2 options');
       return;
     }
     
     try {
+      // Send poll to API with auth token
       const res = await fetch('/api/poll', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${authToken}`
+          'Authorization': `Basic ${authToken}`  // Basic auth header
         },
         body: JSON.stringify({ question: question.trim(), options: validOptions })
       });
       
       if (res.ok) {
+        // Refresh poll data
         fetchPoll();
+        
+        // Reset form for next poll
         setQuestion('');
         setOptions(['', '']);
         
-        // Haptic feedback on iOS
+        // Haptic feedback on mobile (iOS/Android)
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
         
-        // Show success toast
+        // Show success toast for 2 seconds
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
         
-        // Refocus question input for next poll
+        // Refocus question input for rapid poll creation
         if (questionInputRef.current) {
           questionInputRef.current.focus();
         }

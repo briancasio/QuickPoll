@@ -25,7 +25,7 @@ Brian
 ## Local Setup
 
 ```bash
-# 1. Clone the repo
+# 1. Clone the repo (or just download the zip code lol)
 git clone https://github.com/briancasio/QuickPoll.git
 cd QuickPoll
 

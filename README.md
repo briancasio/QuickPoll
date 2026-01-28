@@ -8,12 +8,6 @@ Something you said during our first lab really stuck with me! You mentioned that
 
 Over the past few days I've been working on a small app on my own time that lets students answer questions anonymously and in real time. The idea is to keep that quick feedback without putting anyone on the spot :)
 
-If you want to try it, it works best on Chrome:  
-**https://quickpoll.briancasio.com**
-
-**Login:** admin  
-**Password:** password123
-
 No expectations at all that you'll use it!! This is a proof of concept, you can do whatever you want with it, I just wanted to show you the idea :)
 
 Thanks!!  

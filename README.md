@@ -1,8 +1,27 @@
-# QuickPoll 🗳️
+# QuickPoll 
 
-Real-time polling app for classrooms. Voice-enabled, optimized for iPhone.
+## Hi Daniel!!
 
-## Requirements
+I'm Brian Casio! I'm in your Computer Organization class with Dr. Moore.
+
+Something you said during our first lab really stuck with me! You mentioned that asking questions to the group can be a bad habit and that you're trying to avoid it. I don't really see it as a bad habit, since it's a quick way to see what the class understands, but I totally get that answering out loud can feel intimidating for some people.
+
+Over the past few days I've been working on a small app on my own time that lets students answer questions anonymously and in real time. The idea is to keep that quick feedback without putting anyone on the spot :)
+
+If you want to try it, it works best on Chrome:  
+**https://quickpoll.briancasio.com**
+
+**Login:** admin  
+**Password:** password123
+
+No expectations at all that you'll use it!! This is a proof of concept, you can do whatever you want with it, I just wanted to show you the idea :)
+
+Thanks!!  
+Brian
+
+---
+
+## Requirements to deploy your own version
 
 - Node.js 18+
 - [Vercel](https://vercel.com) account (free)
@@ -31,7 +50,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## Deploy to Vercel (Free)
+## Deploy online with Vercel (Free)
 
 1. Fork this repo on GitHub
 2. Go to [vercel.com/new](https://vercel.com/new)
@@ -92,7 +111,3 @@ quickpoll/
 → They auto-clear 2 min after the last vote
 
 ---
-
-## License
-
-MIT

@@ -38,7 +38,7 @@ cd QuickPoll
 # 2. Install dependencies
 npm install
 
-# 3. Create .env.local file
+# 3. Create .env.local file (this is only if you want to run it locally, don't forget!)
 echo "ADMIN_USER=admin" > .env.local
 echo "ADMIN_PASS=yourpassword123" >> .env.local
 
@@ -55,7 +55,7 @@ Open [http://localhost:3000](http://localhost:3000)
 1. Fork this repo on GitHub
 2. Go to [vercel.com/new](https://vercel.com/new)
 3. Import your fork
-4. Add **Environment Variables**:
+4. Add **Environment Variables** (you don't need to create a .env.local file, instead use this in vercel):
    - `ADMIN_USER` = `admin`
    - `ADMIN_PASS` = `yourpassword123`
 5. Click **Deploy**

@@ -34,7 +34,7 @@ npm install
 
 # 3. Create .env.local file (this is only if you want to run it locally, don't forget!)
 echo "ADMIN_USER=admin" > .env.local
-echo "ADMIN_PASS=yourpassword123" >> .env.local
+echo "ADMIN_PASS=yourpassword1234" >> .env.local
 
 # 4. Run the app
 npm run dev
@@ -51,7 +51,7 @@ Open [http://localhost:3000](http://localhost:3000)
 3. Import your fork
 4. Add **Environment Variables** (you don't need to create a .env.local file, instead use this in vercel):
    - `ADMIN_USER` = `admin`
-   - `ADMIN_PASS` = `yourpassword123`
+   - `ADMIN_PASS` = `yourpassword1234`
 5. Click **Deploy**
 
 ---

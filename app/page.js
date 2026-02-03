@@ -23,7 +23,7 @@ export default function Home() {
   const [selectedOption, setSelectedOption] = useState(null);
 
   // QR Code configuration - points to the deployed app
-  const siteUrl = 'https://quickpoll.briancasio.com';
+  const siteUrl = 'https://qp.briancasio.com';
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(siteUrl)}`;
 
   // SWR hook for automatic polling and caching
@@ -141,7 +141,7 @@ export default function Home() {
       {/* QR Code for easy access */}
       <div className="qr-section">
         <img src={qrCodeUrl} alt="Scan to join" className="qr-code" />
-        <p className="qr-text">quickpoll.briancasio.com</p>
+        <p className="qr-text">qp.briancasio.com</p>
       </div>
     </div>
   );
